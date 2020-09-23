@@ -1,37 +1,26 @@
-##-----------------------------------------------------------------------------
-##  Welcome to Streamripper
-##-----------------------------------------------------------------------------
-PROJECT (STREAMRIPPER)
+cmake_minimum_required(VERSION 2.6.0)
 
-CMAKE_MINIMUM_REQUIRED (VERSION 2.6.0)
+project(STREAMRIPPER)
 
-## Tell CMake to be quiet
-CMAKE_POLICY (SET CMP0003 NEW)
+# Tell CMake to be quiet
+cmake_policy(SET CMP0003 NEW)
 
-## Default to release
-IF (NOT CMAKE_BUILD_TYPE)
-  SET (CMAKE_BUILD_TYPE Release)
-ENDIF (NOT CMAKE_BUILD_TYPE)
+# Default to release
+if (NOT CMAKE_BUILD_TYPE)
+set(CMAKE_BUILD_TYPE Release)
+endif (NOT CMAKE_BUILD_TYPE)
 
-##-----------------------------------------------------------------------------
-##  Include files
-##-----------------------------------------------------------------------------
-INCLUDE (CheckFunctionExists)
-INCLUDE (CheckLibraryExists)
+include(CheckFunctionExists)
+include(CheckLibraryExists)
 
 # http://www.cmake.org/pipermail/cmake/2008-December/025886.html
-INCLUDE (InstallRequiredSystemLibraries)
+include(InstallRequiredSystemLibraries)
 
-##-----------------------------------------------------------------------------
-##  Find libraries
-##-----------------------------------------------------------------------------
-IF (UNIX)
-  SET (MATH_LIB -lm)
-ELSE (UNIX)
-  SET (MATH_LIB)
-ENDIF (UNIX)
+if (UNIX)
+set(MATH_LIB -lm)
+endif (UNIX)
 
-SET (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
@@ -45,51 +34,14 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/ogg)
 set(OGG_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/ogg/include)
 set(OGG_LIBRARIES ogg)
 
+find_package(VORBIS)
 
-FIND_PACKAGE (VORBIS)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SR_FindSockets.cmake)
 
-INCLUDE (${CMAKE_SOURCE_DIR}/cmake/SR_FindSockets.cmake)
+find_library(SEMAPHORE_LIBRARIES NAMES sem rt)
 
-FIND_LIBRARY (SEMAPHORE_LIBRARIES NAMES sem rt)
-
-IF (WIN32)
-  INCLUDE_DIRECTORIES (BEFORE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/glib-2.16.6-1/include/glib-2.0")
-  INCLUDE_DIRECTORIES (BEFORE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/glib-2.16.6-1/lib/glib-2.0/include")
-  INCLUDE_DIRECTORIES (BEFORE "${MAD_INCLUDE_DIR}")
-  INCLUDE_DIRECTORIES (BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/win32/iconv")
-  INCLUDE_DIRECTORIES (BEFORE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/libogg-1.1.3")
-  INCLUDE_DIRECTORIES (BEFORE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/libvorbis-1.1.2")
-  INCLUDE_DIRECTORIES (BEFORE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/zlib-1.2.3/include")
-ENDIF (WIN32)
-
-##-----------------------------------------------------------------------------
-##  Configure include file
-##-----------------------------------------------------------------------------
-CONFIGURE_FILE (${CMAKE_CURRENT_SOURCE_DIR}/sr_config.h.cmake 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/sr_config.h.cmake 
   ${CMAKE_CURRENT_BINARY_DIR}/sr_config.h)
-
-##-----------------------------------------------------------------------------
-##  Copy dlls
-##-----------------------------------------------------------------------------
-IF (WIN32)
-  EXECUTE_PROCESS (COMMAND ${CMAKE_COMMAND} "-E" "copy" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/glib-2.16.6-1/bin/libglib-2.0-0.dll"
-    "${CMAKE_CURRENT_BINARY_DIR}")
-  EXECUTE_PROCESS (COMMAND ${CMAKE_COMMAND} "-E" "copy" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/mingw/libiconv-2.dll"
-    "${CMAKE_CURRENT_BINARY_DIR}")
-  EXECUTE_PROCESS (COMMAND ${CMAKE_COMMAND} "-E" "copy" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/mingw/libintl-8.dll"
-    "${CMAKE_CURRENT_BINARY_DIR}")
-  EXECUTE_PROCESS (COMMAND ${CMAKE_COMMAND} "-E" "copy" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/win32/zlib-1.2.3/zlib1.dll"
-    "${CMAKE_CURRENT_BINARY_DIR}")
-ENDIF (WIN32)
 
 file(GLOB STREAMRIPPER_LIB_SRC "src/*.c")
 
@@ -99,125 +51,28 @@ target_include_directories(streamripper1 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/inc
 target_include_directories(streamripper1 PRIVATE ${OGG_INCLUDE_DIRS})
 target_include_directories(streamripper1 PRIVATE ${MAD_INCLUDE_DIRS})
 target_include_directories(streamripper1 PRIVATE ${GLIB_INCLUDE_DIRS})
-INSTALL (TARGETS streamripper1 DESTINATION lib)
 
-##-----------------------------------------------------------------------------
-##  Source files
-##-----------------------------------------------------------------------------
-SET(STREAMRIPPER_SRC
-	src/console/streamripper.c
-	)
-
-SET(WSTREAMRIPPER_SRC
-	winamp_plugin/debug_box.c
-	winamp_plugin/debug_box.h
-	winamp_plugin/dock.c
-	winamp_plugin/dock.h
-	winamp_plugin/gen.h
-	winamp_plugin/ioapi.c
-	winamp_plugin/ioapi.h
-	winamp_plugin/ipc_pe.h
-	winamp_plugin/options.c
-	winamp_plugin/options.h
-#	winamp_plugin/plugin_dll_main.c
-	winamp_plugin/plugin_main.c
-	winamp_plugin/plugin_main.h
-	winamp_plugin/registry.c
-	winamp_plugin/registry.h
-	winamp_plugin/render.c
-	winamp_plugin/render.h
-	winamp_plugin/render_2.c
-	winamp_plugin/render_2.h
-	winamp_plugin/resource.h
-	winamp_plugin/unzip.c
-	winamp_plugin/unzip.h
-	winamp_plugin/wa_ipc.h
-	winamp_plugin/wa_msgids.h
-#	winamp_plugin/winamp_dll.c
-#	winamp_plugin/winamp_dll.h
-	winamp_plugin/winamp_exe.c
-	winamp_plugin/winamp_exe.h
-	winamp_plugin/wstreamripper.h
-	winamp_plugin/Script.rc
-	)
-
-##-----------------------------------------------------------------------------
-##  Targets
-##-----------------------------------------------------------------------------
-IF (WIN32)
-  LINK_DIRECTORIES(
-#	"${CMAKE_CURRENT_SOURCE_DIR}/libmad-0.15.1b/msvc++/Release"
-	"${CMAKE_CURRENT_SOURCE_DIR}/win32/iconv"
-	"${CMAKE_CURRENT_SOURCE_DIR}/tre-0.7.2/win32/Release"
-#	"${CMAKE_CURRENT_SOURCE_DIR}/win32/glib-2.12.12/lib"
-#	"${CMAKE_CURRENT_SOURCE_DIR}/win32/glib-2.16.3/lib"
-#	"c:/gcs6/projects/sripper_1x/glib-gcs/no-unicows"
-	"${CMAKE_CURRENT_SOURCE_DIR}/win32/glib-2.16.6-1/lib"
-#	"c:/gcs6/pkg/libunicows/libunicows-1.1.2-msvc6"
-#	"c:/gcs6/pkg/libunicows/libunicows-1.1.1-mingw"
-	"${CMAKE_CURRENT_SOURCE_DIR}/win32/libvorbis-1.1.2"
-	"${CMAKE_CURRENT_SOURCE_DIR}/win32/zlib-1.2.3/lib"
-	)
-ENDIF (WIN32)
-
-SET (STREAMRIPPER_LIBS ${MAD_LIBRARIES} ${GLIB_LIBRARIES} ${MATH_LIB})
-
-IF (WIN32)
-  SET (STREAMRIPPER_LIBS 
-    ${STREAMRIPPER_LIBS}
-    iconv unicows glib-2.0 unicows ws2_32 vorbis zdll)
-ENDIF (WIN32)
-
-IF (SEMAPHORE_LIBRARIES)
-  SET (STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} ${SEMAPHORE_LIBRARIES})
-ENDIF (SEMAPHORE_LIBRARIES)
-
-IF (OGG_FOUND AND VORBIS_FOUND)
-  SET (STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} ${OGG_LIBRARIES}
-    ${VORBIS_LIBRARIES})
-ENDIF (OGG_FOUND AND VORBIS_FOUND)
-
-SET (STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} ${SR_EXTRA_LIBS} ${MATH_LIB})
-
-##-----------------------------------------------------------------------------
-##  Linking
-##-----------------------------------------------------------------------------
-## chkstk.o may be required for mingw
-IF (WIN32 AND (MSYS OR MINGW))
-  SET (STREAMRIPPER_SRC ${STREAMRIPPER_SRC} 
-  		       ${CMAKE_CURRENT_SOURCE_DIR}/win32/chkstk.o)
-ENDIF (WIN32 AND (MSYS OR MINGW))
-
-#ADD_LIBRARY (streamripper1 ${STREAMRIPPER_LIB_SRC})
-ADD_EXECUTABLE (streamripper ${STREAMRIPPER_SRC})
+add_executable(streamripper "src/console/streamripper.c")
 target_include_directories(streamripper PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(streamripper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(streamripper PRIVATE ${GLIB_INCLUDE_DIRS})
-TARGET_LINK_LIBRARIES (streamripper ${MY_MATH_LIB} 
-  streamripper1 ${STREAMRIPPER_LIBS})
+set(STREAMRIPPER_LIBS ${MAD_LIBRARIES} ${GLIB_LIBRARIES} ${MATH_LIB} ${OGG_LIBRARIES} ${VORBIS_LIBRARIES})
+if (WIN32)
+set(STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} unicows ws2_32 vorbis zdll)
+endif (WIN32)
+if (SEMAPHORE_LIBRARIES)
+SET (STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} ${SEMAPHORE_LIBRARIES})
+endif (SEMAPHORE_LIBRARIES)
+target_link_libraries(streamripper streamripper1 ${STREAMRIPPER_LIBS})
 
-IF (WIN32)
-    ADD_EXECUTABLE (wstreamripper WIN32 ${WSTREAMRIPPER_SRC})
-    TARGET_LINK_LIBRARIES (wstreamripper ${MY_MATH_LIB} 
-      streamripper1 ${STREAMRIPPER_LIBS}
-      comctl32.lib
-      )
-ENDIF (WIN32)
+if (WIN32)
+file(GLOB WSTREAMRIPPER_SRC "winamp_plugin/*.c")
+add_executable(wstreamripper WIN32 ${WSTREAMRIPPER_SRC})
+target_link_libraries(wstreamripper streamripper1 ${STREAMRIPPER_LIBS} comctl32.lib)
+endif (WIN32)
 
-IF (MSVC)
-  ADD_EXECUTABLE (glib_iconv_test lib/glib_iconv_test.c)
-  TARGET_LINK_LIBRARIES (glib_iconv_test ${STREAMRIPPER_LIBS})
-
-IF (0)
-  ADD_EXECUTABLE (glib_win98_test lib/glib_win98_test.c)
-  TARGET_LINK_LIBRARIES (glib_win98_test ${STREAMRIPPER_LIBS})
-ENDIF (0)
-ENDIF (MSVC)
-
-##-----------------------------------------------------------------------------
-##  Install
-##-----------------------------------------------------------------------------
-INSTALL(TARGETS streamripper DESTINATION bin)
-IF (WIN32)
-INSTALL(TARGETS wstreamripper DESTINATION bin)
-ENDIF (WIN32)
+install(TARGETS streamripper1 DESTINATION lib)
+install(TARGETS streamripper DESTINATION bin)
+if (WIN32)
+install(TARGETS wstreamripper DESTINATION bin)
+endif (WIN32)
