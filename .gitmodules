@@ -1,0 +1,3 @@
+[submodule "ThirdParty/ogg"]
+	path = ThirdParty/ogg
+	url = https://github.com/xiph/ogg.git

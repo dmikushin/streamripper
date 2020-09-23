@@ -18,12 +18,9 @@ ENDIF (NOT CMAKE_BUILD_TYPE)
 ##-----------------------------------------------------------------------------
 INCLUDE (CheckFunctionExists)
 INCLUDE (CheckLibraryExists)
-INCLUDE (FindPkgConfig)
-INCLUDE (FindOpenGL)  # Why?
 
 # http://www.cmake.org/pipermail/cmake/2008-December/025886.html
 INCLUDE (InstallRequiredSystemLibraries)
-
 
 ##-----------------------------------------------------------------------------
 ##  Find libraries
@@ -34,31 +31,26 @@ ELSE (UNIX)
   SET (MATH_LIB)
 ENDIF (UNIX)
 
-IF (UNIX)
-  PKG_CHECK_MODULES (GLIB2 REQUIRED glib-2.0>=2.16)
-ENDIF (UNIX)
-
 SET (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-FIND_PACKAGE (IBERTY)
-FIND_PACKAGE (MAD)
-FIND_PACKAGE (OGG)
-FIND_PACKAGE (VORBIS)
 
-IF (WIN32)
-  SET (MAD_LIBRARIES "${CMAKE_SOURCE_DIR}/win32/libmad-0.15.1b/lib/libmad.lib")
-  SET (MAD_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/win32/libmad-0.15.1b/include")
-ENDIF (WIN32)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+link_directories(${GLIB_LIBRARY_DIRS})
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mad)
+set(MAD_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/mad/include)
+set(MAD_LIBRARIES mad)
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/ogg)
+set(OGG_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/ogg/include)
+set(OGG_LIBRARIES ogg)
+
+
+FIND_PACKAGE (VORBIS)
 
 INCLUDE (${CMAKE_SOURCE_DIR}/cmake/SR_FindSockets.cmake)
 
 FIND_LIBRARY (SEMAPHORE_LIBRARIES NAMES sem rt)
-
-##-----------------------------------------------------------------------------
-##  Include directories
-##-----------------------------------------------------------------------------
-INCLUDE_DIRECTORIES (BEFORE ${GLIB2_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES (BEFORE ${CMAKE_CURRENT_BINARY_DIR})
-INCLUDE_DIRECTORIES (BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 IF (WIN32)
   INCLUDE_DIRECTORIES (BEFORE 
@@ -99,16 +91,21 @@ IF (WIN32)
     "${CMAKE_CURRENT_BINARY_DIR}")
 ENDIF (WIN32)
 
-##-----------------------------------------------------------------------------
-##  Build subdirectories
-##-----------------------------------------------------------------------------
-ADD_SUBDIRECTORY (lib)
+file(GLOB STREAMRIPPER_LIB_SRC "src/*.c")
+
+ADD_LIBRARY (streamripper1 ${STREAMRIPPER_LIB_SRC})
+target_include_directories(streamripper1 PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(streamripper1 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(streamripper1 PRIVATE ${OGG_INCLUDE_DIRS})
+target_include_directories(streamripper1 PRIVATE ${MAD_INCLUDE_DIRS})
+target_include_directories(streamripper1 PRIVATE ${GLIB_INCLUDE_DIRS})
+INSTALL (TARGETS streamripper1 DESTINATION lib)
 
 ##-----------------------------------------------------------------------------
 ##  Source files
 ##-----------------------------------------------------------------------------
 SET(STREAMRIPPER_SRC
-	console/streamripper.c
+	src/console/streamripper.c
 	)
 
 SET(WSTREAMRIPPER_SRC
@@ -158,28 +155,22 @@ IF (WIN32)
 	"${CMAKE_CURRENT_SOURCE_DIR}/win32/glib-2.16.6-1/lib"
 #	"c:/gcs6/pkg/libunicows/libunicows-1.1.2-msvc6"
 #	"c:/gcs6/pkg/libunicows/libunicows-1.1.1-mingw"
-	"${CMAKE_CURRENT_SOURCE_DIR}/win32/libogg-1.1.3"
 	"${CMAKE_CURRENT_SOURCE_DIR}/win32/libvorbis-1.1.2"
 	"${CMAKE_CURRENT_SOURCE_DIR}/win32/zlib-1.2.3/lib"
 	)
 ENDIF (WIN32)
 
-MESSAGE ("MAD_LIBRARIES = ${MAD_LIBRARIES}")
-SET (STREAMRIPPER_LIBS ${MAD_LIBRARIES} ${GLIB2_LIBRARIES} ${MATH_LIB})
+SET (STREAMRIPPER_LIBS ${MAD_LIBRARIES} ${GLIB_LIBRARIES} ${MATH_LIB})
 
 IF (WIN32)
   SET (STREAMRIPPER_LIBS 
     ${STREAMRIPPER_LIBS}
-    iconv unicows glib-2.0 unicows ws2_32 ogg vorbis zdll)
+    iconv unicows glib-2.0 unicows ws2_32 vorbis zdll)
 ENDIF (WIN32)
 
 IF (SEMAPHORE_LIBRARIES)
   SET (STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} ${SEMAPHORE_LIBRARIES})
 ENDIF (SEMAPHORE_LIBRARIES)
-
-IF (IBERTY_FOUND)
-  SET (STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} ${IBERTY_LIBRARIES})
-ENDIF (IBERTY_FOUND)
 
 IF (OGG_FOUND AND VORBIS_FOUND)
   SET (STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} ${OGG_LIBRARIES}
@@ -199,6 +190,9 @@ ENDIF (WIN32 AND (MSYS OR MINGW))
 
 #ADD_LIBRARY (streamripper1 ${STREAMRIPPER_LIB_SRC})
 ADD_EXECUTABLE (streamripper ${STREAMRIPPER_SRC})
+target_include_directories(streamripper PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(streamripper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(streamripper PRIVATE ${GLIB_INCLUDE_DIRS})
 TARGET_LINK_LIBRARIES (streamripper ${MY_MATH_LIB} 
   streamripper1 ${STREAMRIPPER_LIBS})
 
@@ -224,4 +218,6 @@ ENDIF (MSVC)
 ##  Install
 ##-----------------------------------------------------------------------------
 INSTALL(TARGETS streamripper DESTINATION bin)
+IF (WIN32)
 INSTALL(TARGETS wstreamripper DESTINATION bin)
+ENDIF (WIN32)
