@@ -38,8 +38,6 @@ find_package(VORBIS)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SR_FindSockets.cmake)
 
-find_library(SEMAPHORE_LIBRARIES NAMES sem rt)
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/sr_config.h.cmake 
   ${CMAKE_CURRENT_BINARY_DIR}/sr_config.h)
 
@@ -59,6 +57,8 @@ target_include_directories(streamripper PRIVATE ${GLIB_INCLUDE_DIRS})
 set(STREAMRIPPER_LIBS ${MAD_LIBRARIES} ${GLIB_LIBRARIES} ${MATH_LIB} ${OGG_LIBRARIES} ${VORBIS_LIBRARIES})
 if (WIN32)
 set(STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} unicows ws2_32 vorbis zdll)
+else ()
+set(STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} rt pthread)
 endif (WIN32)
 if (SEMAPHORE_LIBRARIES)
 SET (STREAMRIPPER_LIBS ${STREAMRIPPER_LIBS} ${SEMAPHORE_LIBRARIES})
